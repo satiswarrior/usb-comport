@@ -57,13 +57,19 @@ public class gui {
             throw new IOException("! USB device is not found");
         }
 
-        device.configureSerialPort(230400, LineDatabit.BITS_8, LineStopbit.STOP_BIT_1, LineParity.NONE, FlowControl.DISABLE_FLOW_CTRL);
+        device.configureSerialPort(230400,
+                                    LineDatabit.BITS_8,
+                                    LineStopbit.STOP_BIT_1,
+                                    LineParity.NONE,
+                                    FlowControl.DISABLE_FLOW_CTRL );
 
         byte value1 = 0x55;
         byte value2 = 0x02;
         byte[] request = {value1, value2};
 
         sendrequest(value2);
+        String s = "1122";
+        System.out.println(StringWithSpaces(s));
 
         byte[] usbFrame = device.read();
 
@@ -97,12 +103,24 @@ public class gui {
         return new String(hexChars);
     }
 
-    // method for sending command to COM-port
+//     method for sending command to COM-port
     public static void sendrequest(byte value2) throws UsbException {
         byte value1 = 0x55;
         byte[] request = {value1, value2};
 //        System.out.println(request[0] + " " + request[1]);
         device.write(request);
+    }
+
+//    method to split string by bytes
+    public static String StringWithSpaces(String str) {
+        StringBuilder result = new StringBuilder();
+        for (int i = 0; i < str.length(); i++) {
+            if ((i > 0) && (i % 2 == 0)) {
+                result.append(" ");
+            }
+            result.append(str.charAt(i));
+        }
+        return result.toString();
     }
 
 }
