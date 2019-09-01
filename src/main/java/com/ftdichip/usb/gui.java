@@ -7,6 +7,7 @@ import com.ftdichip.usb.enumerated.LineStopbit;
 
 import javax.usb.UsbClaimException;
 import javax.usb.UsbDevice;
+import javax.usb.UsbException;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.text.SimpleDateFormat;
@@ -62,7 +63,8 @@ public class gui {
         byte value2 = 0x02;
         byte[] request = {value1, value2};
 
-        device.write(request);
+        sendrequest(value2);
+
         byte[] usbFrame = device.read();
 
         while (usbFrame.length > 0) {
@@ -93,6 +95,14 @@ public class gui {
             hexChars[j * 2 + 1] = HEX_ARRAY[v & 0x0F];
         }
         return new String(hexChars);
+    }
+
+    // method for sending command to COM-port
+    public static void sendrequest(byte value2) throws UsbException {
+        byte value1 = 0x55;
+        byte[] request = {value1, value2};
+//        System.out.println(request[0] + " " + request[1]);
+        device.write(request);
     }
 
 }
