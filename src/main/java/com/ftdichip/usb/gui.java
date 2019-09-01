@@ -63,7 +63,7 @@ public class gui {
                                     LineParity.NONE,
                                     FlowControl.DISABLE_FLOW_CTRL );
 
-        byte value1 = 0x55;
+        byte value1 = 0x04;
         byte value2 = 0x02;
         byte[] request = {value1, value2};
 
@@ -75,8 +75,11 @@ public class gui {
 
         while (usbFrame.length > 0) {
             System.out.println("   READ " + usbFrame.length + " bytes: " + usbFrame);
-            // System.out.println(new BigInteger(1, usbFrame).toString(16));
-            System.out.println(bytesToHex(usbFrame));
+            System.out.println(usbFrame[0]);
+            String byteFrame = bytesToHex(usbFrame);
+            System.out.println(byteFrame);
+            System.out.println(StringWithSpaces(byteFrame));
+            System.out.println(DecodeWorkMode(usbFrame));
             usbFrame = device.read();
         }
     }
@@ -121,6 +124,68 @@ public class gui {
             result.append(str.charAt(i));
         }
         return result.toString();
+    }
+
+//    method to decode work mode
+    public static String DecodeWorkMode(byte[] arr) {
+        String result[] = new String[6];
+        byte HighByte = arr[2];
+        byte LowByte = arr[1];
+//    Range
+        if (HighByte - 0x08 >= 0x00) {
+            result[0] = "Wide (+/- 20.46 mV)\n";
+            HighByte -= 0x08;
+        } else {
+            result[0] = "Narrow (+/- 10,23 mV)\n";
+            HighByte -= 0x04;
+        }
+//    Speed
+        if (HighByte - 0x02 == 0x00) {
+            result[1] = "High\n";
+        } else {
+            result[1] = "Normal\n";
+        }
+//    Frequency
+        if (LowByte - 0x80 >= 0x00) {
+            result[2] = "2000Hz\n";
+            LowByte -= 0x80;
+        } else if (LowByte - 0x40 >= 0x00) {
+            result[2] = "1000Hz\n";
+            LowByte -= 0x40;
+        } else {
+            result[2] = "500Hz\n";
+            LowByte -= 0x20;
+        }
+//    ADS model
+        if (LowByte - 0x10 >= 0x00) {
+            result[3] = "ADS1298 (24 bits)\n";
+            LowByte -= 0x10;
+        } else {
+            result[3] = "ADS1198 (16 bits)\n";
+            LowByte -= 0x08;
+        }
+//    Control mode
+        if (LowByte - 0x04 >= 0x00) {
+            result[4] = "On\n";
+            LowByte -= 0x04;
+        } else {
+            result[4] = "Off\n";
+        }
+//    Electrode break monitoring
+        if (LowByte - 0x02 == 0x01) {
+            result[5] = "On\n";
+        } else {
+            result[5] = "Off\n";
+        }
+
+        return  "Miocard-12 works in mode:\n" +
+                "Electrode break monitoring range: " + result[0] +
+                "Isoline alignment speed: " + result[1] +
+                "Frequency: " + result[2] +
+                "ADS model: " + result[3] +
+                "Control mode: " + result[4] +
+                "Isoline output to zero: " + result[5] +
+                "Electrode break monitoring: On";
     }
 
 }
