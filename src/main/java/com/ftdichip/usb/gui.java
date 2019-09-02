@@ -15,20 +15,37 @@ import javax.usb.UsbException;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
+import java.io.*;
 import java.math.BigInteger;
 import java.text.SimpleDateFormat;
 import java.util.Collection;
 import java.util.Date;
+
+
 
 public class gui {
     private static final String FTDeviceName0 = "MIOKARD-12";
     private static final String FTDeviceName1 = "ECG";
     private static final char[] HEX_ARRAY = "0123456789ABCDEF".toCharArray();
     private static FTDI device = null;
+
+    private static PrintStream standardOut;
+
+    public static class CustomOutputStream extends OutputStream {
+        private JTextArea textArea;
+
+        public CustomOutputStream(JTextArea textArea) {
+            this.textArea = textArea;
+        }
+
+        @Override
+        public void write(int b) throws IOException {
+            // redirects data to the text area
+            textArea.append(String.valueOf((char)b));
+            // scrolls the text area to the end of data
+            textArea.setCaretPosition(textArea.getDocument().getLength());
+        }
+    }
 
     public static void main(String[] args) {
         try {
@@ -107,6 +124,18 @@ public class gui {
         LogField.setRows(10);
         JScrollPane scrollPane2 = new JScrollPane(LogField);
         panel4.add(scrollPane1); panel4.add(scrollPane2);
+
+//        relocate standart output stream to textarea
+/////////////////////////////////////////
+        PrintStream printStream = new PrintStream(new CustomOutputStream(LogField));
+        // keeps reference of standard output stream
+        standardOut = System.out;
+
+        // re-assigns standard output stream and error output stream
+        System.setOut(printStream);
+        System.setErr(printStream);
+/////////////////////////////////////////
+
 
         frame.add(panel4, "wrap");
 
@@ -259,32 +288,65 @@ public class gui {
         });
 
         Start.addActionListener(new ActionListener() {
+
             @Override
             public void actionPerformed(ActionEvent e) {
-                try {
-                    sendRequest((byte) 0x09);
-                } catch (UsbException ex) {
-                    ex.printStackTrace();
-                }
-                byte[] usbFrame = new byte[0];
-                try {
-                    usbFrame = device.read();
-                } catch (UsbException ex) {
-                    ex.printStackTrace();
-                }
+//                try {
+//                    sendRequest((byte) 0x09);
+//                } catch (UsbException ex) {
+//                    ex.printStackTrace();
+//                }
 
-                while (usbFrame.length > 0) {
-                    String str = StringWithSpaces(bytesToHex(usbFrame));
-                    System.out.println(str);
-                    LogField.append(str);
-//                    try {
-//                        usbFrame = device.read();
-//                    } catch (UsbException ex) {
-//                        ex.printStackTrace();
-//                    }
-                }
+                printLog();
+
+//                byte[] usbFrame = new byte[0];
+//                try {
+//                    usbFrame = device.read();
+//                } catch (UsbException ex) {
+//                    ex.printStackTrace();
+//                }
+//
+//                while (usbFrame.length > 0) {
+//                    String str = StringWithSpaces(bytesToHex(usbFrame));
+//                    //LogField.repaint();
+//                    System.out.println(str);
+//                }
+
+            }
+
+            private void printLog() {
+                Thread thread = new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+
+                        try {
+                            sendRequest((byte) 0x09);
+                        } catch (UsbException ex) {
+                            ex.printStackTrace();
+                        }
+
+                        byte[] usbFrame = new byte[0];
+                        try {
+                            usbFrame = device.read();
+                        } catch (UsbException ex) {
+                            ex.printStackTrace();
+                        }
+
+                        while (usbFrame.length > 0) {
+                            String str = StringWithSpaces(bytesToHex(usbFrame));
+                            System.out.println(str);
+                            try {
+                                Thread.sleep(1000);
+                            } catch (InterruptedException ex) {
+                                ex.printStackTrace();
+                            }
+                        }
+                    }
+                });
+                thread.start();
             }
         });
+
 
         Stop.addActionListener(new ActionListener() {
             @Override
@@ -297,6 +359,7 @@ public class gui {
             }
         });
 
+
         Clear.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -304,6 +367,7 @@ public class gui {
             }
         });
 
+//        cool saveas window
         Save.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -353,7 +417,6 @@ public class gui {
                 String DeviceName;
                 try {
                     DeviceName = Device.getProductString();
-//                    System.out.println((new SimpleDateFormat("dd/MM/yy HH:mm:ss")).format(new Date()) + ": Device - " + DeviceName);
                 } catch (Exception E) {
                     device = FTDI.getInstance(Device);
                     break;
@@ -383,16 +446,6 @@ public class gui {
 //        start program with sending empty command
         sendRequest((byte) 0x08);
 
-//        byte[] usbFrame = device.read();
-
-//        while (usbFrame.length > 0) {
-//            System.out.println("   READ " + usbFrame.length + " bytes: " + usbFrame);
-//            String byteFrame = bytesToHex(usbFrame);
-//            System.out.println(byteFrame);
-//            System.out.println(StringWithSpaces(byteFrame));
-//            System.out.println(DecodeWorkMode(usbFrame));
-//            usbFrame = device.read();
-//        }
     }
 
     public static void Disconnect() {
